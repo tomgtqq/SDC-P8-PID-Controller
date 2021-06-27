@@ -35,6 +35,10 @@ double PID::TotalError() {
 }
 ```
 
+### PID architecture
+
+![PID architecture](./image/PID_architecture.png)
+
 ### PID paramaters tuning
 
 ![twiddle](./image/twiddle.gif)
