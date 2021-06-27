@@ -8,9 +8,32 @@ Self-Driving Car Engineer Nanodegree Program
 
 ![Proportional Control](./image/Proportional_Control.png)
 
+```
+  p_error = cte;
+```
+
 ![Proportional Differential Control](./image/Proportional_Differential_Control.png)
 
+```
+  d_error = cte - p_error;
+  p_error = cte;
+```
+
 ![Proportional Differential Integral Control](./image/Proportional_Differential_Integral_Control.png)
+
+```
+void PID::UpdateError(double cte) {
+  d_error = cte - p_error;
+  p_error = cte;
+  i_error += cte;
+}
+```
+
+```
+double PID::TotalError() {
+  return -Kp * p_error - Ki * i_error - Kd * d_error;
+}
+```
 
 ### PID paramaters tuning
 
