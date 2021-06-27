@@ -39,6 +39,9 @@ double PID::TotalError() {
 
 ![twiddle](./image/twiddle.gif)
 
+Manual tuning
+![PID tuning](./image/PID_tuning.png)
+
 ## Dependencies
 
 * cmake >= 3.5
