@@ -8,7 +8,7 @@ The project implements a PID controller in C++ to maneuver the vehicle around th
 
 ![PID architecture](./image/PID_architecture.png)
 
-PID controller generates a steering value (actuating signal) to input "SYSTEM", which is a simulator in the project. in feedback control, The simulator will provide the cross-track error (CTE) and so on To simulate Senser data. So I can find how far off the vehicle is from where I want it to be. So the cross-track Error (CTE) is an error term that is the distance between vehicle position and centerline position. If the steering value is accurate. the error term would be zero. So the target is how do I take this CTE and convert it into a suitable steering value.
+PID controller generates a steering value (actuating signal) to input "SYSTEM", which is a simulator in the project. in feedback control, The simulator will provide the cross-track error (CTE) and so on to simulate Senser data. So I can find how far off the vehicle is from where I want it to be. So the cross-track Error (CTE) is an error term that is the distance between vehicle position and centerline position. If the steering value is accurate. the error term would be zero. So the target is how do I take this CTE and convert it into a suitable steering value.
 
 ![PID](./image/P.png)
 
@@ -27,7 +27,7 @@ We need a controller to respond to how fast the Vehicle's closing in on the goal
 For example, if the vehicle is running quickly and fast approaching the centerline. this means that the error is quickly decreasing, That decreasing error has a negative rate of change, which will produce a negative value. That negative value will be added to our controller's output. Therefore lowering the steering value. preventing the Vehicle from overshooting. In the project, I take current CTE minus the Prevouise CTE  ```Kd *(cte - p_error)```
 
 ![PID](./image/PID.png)
-When there is a bias in the system, we had better use past CTE data to correct the system bias. So Integral controller will do calculate all the CTE Subtract from the steering value. In the project, I take ```Ki * ∑ cte```.
+When there was a bias in the system, we had better use past CTE data to correct the system bias. So the Integral controller will do calculate all the CTE Subtract from the steering value. In the project, I took ```Ki * ∑ cte```.
 
 There are three branches each contribute some amount to the overall output of the controller and there are three parameters to weigh each controller contribution.  So the finial controller output is ``` -Kp *p_error - Ki* i_error - Kd * d_error ```
 
@@ -42,7 +42,7 @@ The next step is tuning the parameters ```Kp Ki Kd```
 ![PID tuning](./image/tuning.png)
 
 - step 1: pid_a.Init(0.1, 0.001, 1);
-First I set initial value as Kp = 0.1 Ki = 0.01 Kd = 1. Becasue Because Kp, Ki, Kd is inversely proportional to T. The vehicle ran out of the left lane . So I increased Kp to decrease T-rise.
+First I set initial value as Kp = 0.1 Ki = 0.01 Kd = 1. Because Kp, Ki, Kd is inversely proportional to T. The vehicle ran out of the left lane . So I increased Kp to decrease T-rise.
 
 - step 2: pid_a.Init(0.2, 0.001, 1)
   The T-rise is better then before. So I increased a small value.

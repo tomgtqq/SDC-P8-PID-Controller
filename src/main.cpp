@@ -93,29 +93,6 @@ int main() {
 
           steer_value = pid_a.TotalError();
 
-          // clamping  check
-          double pre_steer_value = steer_value;
-
-          // clamping sturation limit
-          steer_value = steer_value > 1 ? 1 : steer_value;
-          steer_value = steer_value < -1 ? -1 : steer_value;
-
-          /**
-           * clamping - turning the integrator off
-           * when the output is sturating and the error is the same sign as the
-           * controller output
-           */
-          if (fabs(steer_value) >= 1) {
-            if (((cte > 0 && steer_value > 0) ||
-                 (cte < 0 && steer_value < 0)) &&
-                (pre_steer_value != steer_value)) {
-              // switch off
-              pid_a.Init(0.25, 0.0, 6.0);
-            } else {
-              pid_a.Init(0.25, 0.001, 6.0);
-            }
-          }
-
           // DEBUG
           std ::cout << "CTE: " << cte << " Steering Value: " << steer_value
                      << std::endl;
