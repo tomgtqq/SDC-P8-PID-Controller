@@ -1,144 +1,108 @@
-# CarND-Controls-PID
+# PID Controls
 
-Self-Driving Car Engineer Nanodegree Program
+The project implements a PID controller in C++ to maneuver the vehicle around the track.
 
 ---
 
 ### PID controller
 
-![Proportional Control](./image/Proportional_Control.png)
-
-```
-  p_error = cte;
-```
-
-![Proportional Differential Control](./image/Proportional_Differential_Control.png)
-
-```
-  d_error = cte - p_error;
-  p_error = cte;
-```
-
-![Proportional Differential Integral Control](./image/Proportional_Differential_Integral_Control.png)
-
-```
-void PID::UpdateError(double cte) {
-  d_error = cte - p_error;
-  p_error = cte;
-  i_error += cte;
-}
-```
-
-```
-double PID::TotalError() {
-  return -Kp * p_error - Ki * i_error - Kd * d_error;
-}
-```
-
-### PID architecture
-
 ![PID architecture](./image/PID_architecture.png)
+
+PID controller generates a steering value (actuating signal) to input "SYSTEM", which is a simulator in the project. in feedback control, The simulator will provide the cross-track error (CTE) and so on To simulate Senser data. So I can find how far off the vehicle is from where I want it to be. So the cross-track Error (CTE) is an error term that is the distance between vehicle position and centerline position. If the steering value is accurate. the error term would be zero. So the target is how do I take this CTE and convert it into a suitable steering value.
+
+![PID](./image/P.png)
+
+Using the CTE at the present moment to decide How much "α" are going to rotate . For example If the CTE is 10m and  I set P-controller τ as 0.1 . then I can get the steer speed is 1 rad/s. So A second later， the steering value would be 1 rad , So I can get
+```α = 1 * 180 / π```
+
+So the "α" is proportional to The CTE. In the project, I directly design P-Controller as  ```Kp * p_error```
+
+But here a problem. the Vehicle does not stop when it reaches the centerline. The speed of a vehicle can be decomposed into horizontal and vertical speeds.
+![PID](./image/speed.png)
+So the vehicle is overshoot. When the vehicle tried to fix the overshoot, it would create a Vy in the opposite direction. So the Vy is never to be zero.
+
+![PID](./image/PD.png)
+
+We need a controller to respond to how fast the Vehicle's closing in on the goal. So a derivative is a better way to measure the rate of change of the error that is how fast the error is growing or shrinking.
+For example, if the vehicle is running quickly and fast approaching the centerline. this means that the error is quickly decreasing, That decreasing error has a negative rate of change, which will produce a negative value. That negative value will be added to our controller's output. Therefore lowering the steering value. preventing the Vehicle from overshooting. In the project, I take current CTE minus the Prevouise CTE  ```Kd *(cte - p_error)```
+
+![PID](./image/PID.png)
+When there is a bias in the system, we had better use past CTE data to correct the system bias. So Integral controller will do calculate all the CTE Subtract from the steering value. In the project, I take ```Ki * ∑ cte```.
+
+There are three branches each contribute some amount to the overall output of the controller and there are three parameters to weigh each controller contribution.  So the finial controller output is ``` -Kp *p_error - Ki* i_error - Kd * d_error ```
+
+The next step is tuning the parameters ```Kp Ki Kd```
 
 ### PID paramaters tuning
 
-![twiddle](./image/twiddle.gif)
-
-#### Manual tuning
-
 ![PID tuning](./image/PID_tuning.png)
 
-## Dependencies
+#### PID tuning guide
 
-* cmake >= 3.5
-* All OSes: [click here for installation instructions](https://cmake.org/install/)
-* make >= 4.1(mac, linux), 3.81(Windows)
-  * Linux: make is installed by default on most Linux distros
-  * Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
-  * Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
-* gcc/g++ >= 5.4
-  * Linux: gcc / g++ is installed by default on most Linux distros
-  * Mac: same deal as make - [install Xcode command line tools]((<https://developer.apple.com/xcode/features/>)
-  * Windows: recommend using [MinGW](http://www.mingw.org/)
-* [uWebSockets](https://github.com/uWebSockets/uWebSockets)
-  * Run either `./install-mac.sh` or `./install-ubuntu.sh`.
-  * If you install from source, checkout to commit `e94b6e1`, i.e.
+![PID tuning](./image/tuning.png)
 
-    ```
-    git clone https://github.com/uWebSockets/uWebSockets 
-    cd uWebSockets
-    git checkout e94b6e1
-    ```
+- step 1: pid_a.Init(0.1, 0.001, 1);
+First I set initial value as Kp = 0.1 Ki = 0.01 Kd = 1. Becasue Because Kp, Ki, Kd is inversely proportional to T. The vehicle ran out of the left lane . So I increased Kp to decrease T-rise.
 
-    Some function signatures have changed in v0.14.x. See [this PR](https://github.com/udacity/CarND-MPC-Project/pull/3) for more details.
-* Simulator. You can download these from the [project intro page](https://github.com/udacity/self-driving-car-sim/releases) in the classroom.
+- step 2: pid_a.Init(0.2, 0.001, 1)
+  The T-rise is better then before. So I increased a small value.
 
-Fellow students have put together a guide to Windows set-up for the project [here](https://s3-us-west-1.amazonaws.com/udacity-selfdrivingcar/files/Kidnapped_Vehicle_Windows_Setup.pdf) if the environment you have set up for the Sensor Fusion projects does not work for this project. There's also an experimental patch for windows in this [PR](https://github.com/udacity/CarND-PID-Control-Project/pull/3).
+- step 3: pid_a.Init(0.25, 0.001, 2)
+  The vehicle oscillated , I increased Kd to decrease overshoot.
 
-## Basic Build Instructions
+- step 4: pid_a.Init(0.25, 0.001, 3)
+  The Oscillating situation is not better, I need to continue to increase the Kd.
+
+- step 5: pid_a.Init(0.25, 0.001, 4)
+  When the vehicle runs through a fast curve lane, goes out of the lane. I increased Kd to deal with strong changes in future data
+
+- step 6: pid_a.Init(0.25,0.001, 5);  
+  The vehicle oscillate wiht weakening intensity, I increased Kd to decrease overshoot
+
+- step 7: pid_a.Init(0.25, 0.001, 5.5);
+  The vehicle was slightly overshooting. I increased Kd to a small value.
+
+- step 8: pid_a.Init(0.25, 0.001, 5.75);
+  The vehicle went off the track on the second lap, I increased Kd to decrease overshoot.
+
+- step 9: pid_a.Init(0.25, 0.001, 6.0);
+  The controller works well with these parameters. No further Twiddle algorithm was required, and the Twiddle algorithm was not very efficient in this project.
+
+## Build
 
 1. Clone this repo.
 2. Make a build directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
 4. Run it: `./pid`.
 
-Tips for setting up your environment can be found [here](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/23d376c7-0195-4276-bdf0-e02f1f3c665d)
+The environment can be found [here](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/0949fca6-b379-42af-a919-ee50aa304e6a/lessons/f758c44c-5e40-4e01-93b5-1a82aa4e044f/concepts/23d376c7-0195-4276-bdf0-e02f1f3c665d)
 
-## Editor Settings
+## Licensing, Authors, and Acknowledgements <a name="licensing"></a>
 
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
+### Built With
 
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
+- cmake >= 3.5
+- All OSes: [click here for installation instructions](https://cmake.org/install/)
+- make >= 4.1(mac, linux), 3.81(Windows)
+  - Linux: make is installed by default on most Linux distros
+  - Mac: [install Xcode command line tools to get make](https://developer.apple.com/xcode/features/)
+  - Windows: [Click here for installation instructions](http://gnuwin32.sourceforge.net/packages/make.htm)
+- gcc/g++ >= 5.4
+  - Linux: gcc / g++ is installed by default on most Linux distros
+  - Mac: same deal as make - [install Xcode command line tools]((<https://developer.apple.com/xcode/features/>)
+  - Windows: recommend using [MinGW](http://www.mingw.org/)
+- [uWebSockets](https://github.com/uWebSockets/uWebSockets)
+  - Run either `./install-mac.sh` or `./install-ubuntu.sh`.
+  - If you install from source, checkout to commit `e94b6e1`, i.e.
 
-## Code Style
+### Versioning
 
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
+- We use [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/your/project/tags).
 
-## Project Instructions and Rubric
+### Authors
 
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
+- **Tom Ge** - *Self-Driving Car egineer* - [github profile](https://github.com/tomgtqq)
 
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/e8235395-22dd-4b87-88e0-d108c5e5bbf4/concepts/6a4d8d42-6a04-4aa6-b284-1697c0fd6562)
-for instructions and the project rubric.
+### License
 
-## Hints
-
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
-
-## How to write a README
-
-A well written README file can enhance your project and portfolio.  Develop your abilities to create professional README files by completing [this free course](https://www.udacity.com/course/writing-readmes--ud777).
+- This project is licensed under the MIT License

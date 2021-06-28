@@ -34,16 +34,6 @@ class PID {
    */
   double TotalError();
 
-  /**
-   * twiddle turn parameters gain
-   * @output The PID parameters
-   */
-  void twiddle(double cte);
-  double best_err = std::numeric_limits<double>::max();
-  double tol = std::numeric_limits<double>::min();
-  int idx = 0;
-  int epoc = 0;
-
  private:
   /**
    * PID Errors

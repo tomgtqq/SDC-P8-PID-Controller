@@ -2,6 +2,7 @@
 #include <uWS/uWS.h>
 
 #include <iostream>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -42,14 +43,24 @@ int main() {
 
   PID pid_a;
 
-  // training history
-  // pid_a.Init(1, 0, 0);        // Kp: 1.03852  Ki: 0  Kd: 0
-  // pid_a.Init(0.01, 0.001, 1);  // Kp: 0.385001  Ki: 0.001  Kd: 1.0057
-  // pid_a.Init(0.385, 0.001, 1.005);  //  Kp: 0.34413  Ki: 0.001  Kd: 1.11487
-  // pid_a.Init(0.3441, 0.001, 1.114);  // Kp: 0.24992  Ki: 0.001  Kd: 4.45429
-  // pid_a.Init(0.2499, 0.001, 4.454);  // 0.22647  Ki: 0.001  Kd: 5.28754
-
-  pid_a.Init(0.22647, 0.001, 5.28754);
+  // Manual tuning history
+  // pid_a.Init(0.1, 0.001, 1);
+  // The vehicle ran out of the left lane --> increase Kp to decrease T-rise
+  // pid_a.Init(0.2, 0.001, 1);
+  // increase Kp to decrease T-rise
+  // pid_a.Init(0.25, 0.001, 2);
+  // The vehicle oscillate --> increase Kd to decrease overshoot
+  // pid_a.Init(0.25, 0.001, 3);
+  // The vehicle oscillate --> increase Kd to decrease overshoot
+  // pid_a.Init(0.25, 0.001, 4);  // status：overshoot --> increase Kd
+  // When the vehicle runs through a fast curve lane, goes out of the lane.
+  // increase Kd to deal with strong changes in future data
+  // pid_a.Init(0.25,0.001, 5);  // status：overshoot --> increase Kd The
+  // vehicle oscillate wiht weakening intensity  --> increase Kd to decrease
+  // overshoot
+  // pid_a.Init(0.25, 0.001, 5.5);
+  // slight overshoot
+  pid_a.Init(0.25, 0.001, 6.0);
 
   h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                   uWS::OpCode opCode) {
@@ -71,25 +82,45 @@ int main() {
           double angle = std::stod(j[1]["steering_angle"].get<string>());
           double steer_value;
           double throttle = 0.3;
+
           /**
-           * TODO: Calculate steering value here, remember the steering
-           * value is
-           *   [-1, 1].
-           * NOTE: Feel free to play around with the throttle and speed.
-           *   Maybe use another PID controller to control the speed!
+           * Calculate steering value here, remember the steering
+           * value is [-1, 1].
            */
 
-          // calculate α
+          // error term input
           pid_a.UpdateError(cte);
 
           steer_value = pid_a.TotalError();
 
-          // PID controller parameters tuning
-          // pid_a.twiddle(cte);
+          // clamping  check
+          double pre_steer_value = steer_value;
+
+          // clamping sturation limit
+          steer_value = steer_value > 1 ? 1 : steer_value;
+          steer_value = steer_value < -1 ? -1 : steer_value;
+
+          /**
+           * clamping - turning the integrator off
+           * when the output is sturating and the error is the same sign as the
+           * controller output
+           */
+          if (fabs(steer_value) >= 1) {
+            if (((cte > 0 && steer_value > 0) ||
+                 (cte < 0 && steer_value < 0)) &&
+                (pre_steer_value != steer_value)) {
+              // switch off
+              pid_a.Init(0.25, 0.0, 6.0);
+            } else {
+              pid_a.Init(0.25, 0.001, 6.0);
+            }
+          }
 
           // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value
-                    << std::endl;
+          std ::cout << "CTE: " << cte << " Steering Value: " << steer_value
+                     << std::endl;
+          std ::cout << "CTE: " << cte << " Angle: " << angle
+                     << " Speed: " << speed << std::endl;
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
